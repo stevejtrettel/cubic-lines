@@ -1,9 +1,0 @@
-{
-  "layout": "fullscreen",
-  "controls": true,
-  "uniforms": {
-    "coefficients": { "type": "vec4", "count": 5 },
-    "linePoints": { "type": "vec4", "count": 27 },
-    "lineDirections": { "type": "vec4", "count": 27 }
-  }
-}

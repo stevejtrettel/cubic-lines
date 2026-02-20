@@ -27,8 +27,6 @@ export function createViewport(parent) {
     addOverlay() {
       const d = document.createElement('div');
       d.style.cssText = LAYER + 'pointer-events:none;';
-      // Children opt in to pointer events
-      d.addEventListener('mousedown', () => {}, true);
       el.appendChild(d);
       return d;
     },

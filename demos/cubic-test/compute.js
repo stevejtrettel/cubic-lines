@@ -1,40 +1,106 @@
 /**
- * Takes 6 points in the plane and computes:
- *   - coefficients: Float32Array(20) — cubic surface coefficients (5 vec4s)
- *   - linePoints:   Float32Array(108) — 27 line base points (27 vec4s)
- *   - lineDirections: Float32Array(108) — 27 line directions (27 vec4s)
+ * Takes 6 points in the plane and computes all shader data.
  *
  * Input: array of 6 [x, y] pairs.
+ *
+ * Returns:
+ *   - pts:            Float32Array(12) — 6 points as vec2[6]
+ *   - conics:         Float32Array(36) — 6 conics as vec3[12] (2 vec3s each)
+ *   - linePoints:     Float32Array(84) — 21 line base points (21 vec4s)
+ *   - lineDirections: Float32Array(84) — 21 line directions (21 vec4s)
  */
 
-// Placeholder: returns Clebsch coefficients regardless of input
-const CLEBSCH = new Float32Array([
-      81, -189, -189,   -9,
-    -189,   54,  126, -189,
-     126,   -9,   81, -189,
-      -9, -189,  126,   -9,
-      81,   -9,   -9,    1,
-]);
+import { conicThroughFivePoints, conicOtherIntersection } from '../../src/math/conic.js';
+import { cubicMap, evaluateMap } from '../../src/math/cubic-map.js';
+
+/**
+ * Store a line (point + direction) into the flat arrays at index n.
+ * p3a, p3b are two points on the line in P3 (as 4-element arrays).
+ */
+function storeLine(linePoints, lineDirections, n, p3a, p3b) {
+  const off = n * 4;
+  for (let k = 0; k < 4; k++) {
+    linePoints[off + k] = p3a[k];
+    lineDirections[off + k] = p3b[k] - p3a[k];
+  }
+}
 
 export function compute(sixPoints) {
-  // TODO: compute coefficients and lines from the 6 points
-  // For now, return the Clebsch diagonal cubic as a placeholder
-
-  const coefficients = CLEBSCH;
-
-  const linePoints = new Float32Array(27 * 4);
-  const lineDirections = new Float32Array(27 * 4);
-  for (let i = 0; i < 27; i++) {
-    const angle = (i / 27) * Math.PI * 2.0;
-    linePoints[i * 4 + 0] = Math.cos(angle) * 0.5;
-    linePoints[i * 4 + 1] = Math.sin(angle) * 0.5;
-    linePoints[i * 4 + 2] = 0.0;
-    linePoints[i * 4 + 3] = 1.0;
-    lineDirections[i * 4 + 0] = Math.cos(angle);
-    lineDirections[i * 4 + 1] = Math.sin(angle);
-    lineDirections[i * 4 + 2] = 0.3;
-    lineDirections[i * 4 + 3] = 0.0;
+  // Pack 6 points as flat vec2 array
+  const pts = new Float32Array(12);
+  for (let i = 0; i < 6; i++) {
+    pts[i * 2] = sixPoints[i][0];
+    pts[i * 2 + 1] = sixPoints[i][1];
   }
 
-  return { coefficients, linePoints, lineDirections };
+  const homog = sixPoints.map(([x, y]) => [x, y, 1]);
+
+  // Compute 6 conics, each through 5 of the 6 points (leaving one out)
+  const conicCoeffs = [];
+  const conics = new Float32Array(36);
+  for (let skip = 0; skip < 6; skip++) {
+    const five = homog.filter((_, i) => i !== skip);
+    const c = conicThroughFivePoints(five);
+    conicCoeffs.push(c);
+    if (c) {
+      for (let j = 0; j < 6; j++) conics[skip * 6 + j] = c[j];
+    }
+  }
+
+  // Cubic parameterization P2 → P3
+  const basis = cubicMap(homog);
+
+  const linePoints = new Float32Array(21 * 4);
+  const lineDirections = new Float32Array(21 * 4);
+
+  if (basis) {
+    let n = 0;
+
+    // 15 lines from pairs of points.
+    // The line through pᵢ, pⱼ in P2 maps to a line in P3.
+    // All cubics vanish at pᵢ and pⱼ, so we sample at t=1/3 and t=2/3.
+    for (let i = 0; i < 6; i++) {
+      for (let j = i + 1; j < 6; j++) {
+        const a = homog[i], b = homog[j];
+        const m1 = [
+          (2 * a[0] + b[0]) / 3,
+          (2 * a[1] + b[1]) / 3,
+          (2 * a[2] + b[2]) / 3,
+        ];
+        const m2 = [
+          (a[0] + 2 * b[0]) / 3,
+          (a[1] + 2 * b[1]) / 3,
+          (a[2] + 2 * b[2]) / 3,
+        ];
+        const p3a = evaluateMap(basis, m1);
+        const p3b = evaluateMap(basis, m2);
+        storeLine(linePoints, lineDirections, n, p3a, p3b);
+        n++;
+      }
+    }
+
+    // 6 lines from conics.
+    // Conic i passes through all points except point i.
+    // Use the skipped point as direction (it's NOT on the conic, so f(v) ≠ 0).
+    // Shoot from two known points on the conic to get two new points.
+    for (let skip = 0; skip < 6; skip++) {
+      const c = conicCoeffs[skip];
+      if (!c) { n++; continue; }
+
+      const known = homog.filter((_, i) => i !== skip);
+      const v = homog[skip]; // direction — not on this conic
+
+      const newPt1 = conicOtherIntersection(c, known[0], v);
+      const newPt2 = conicOtherIntersection(c, known[1], v);
+
+      if (newPt1 && newPt2) {
+        const p3a = evaluateMap(basis, newPt1);
+        const p3b = evaluateMap(basis, newPt2);
+        storeLine(linePoints, lineDirections, n, p3a, p3b);
+      }
+      n++;
+    }
+  }
+
+  return { pts, conics, linePoints, lineDirections };
 }

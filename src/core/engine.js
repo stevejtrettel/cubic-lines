@@ -3,7 +3,7 @@
  *
  * Wraps a user-provided mainImage(out vec4, in vec2) shader with
  * Shadertoy-style built-in uniforms (iResolution, iTime, iMouse)
- * plus custom vec4 array uniforms declared in config.json.
+ * plus custom uniforms declared inline at engine creation.
  */
 
 const VERT = `#version 300 es
@@ -11,6 +11,14 @@ void main() {
   vec2 p = vec2(gl_VertexID & 1, gl_VertexID >> 1) * 4.0 - 1.0;
   gl_Position = vec4(p, 0, 1);
 }`;
+
+// Parse uniform spec: 'vec4[5]' → { type: 'vec4', count: 5 }
+//                     'vec2'    → { type: 'vec2', count: 1 }
+function parseUniform(spec) {
+  const m = spec.match(/^(\w+)(?:\[(\d+)\])?$/);
+  if (!m) throw new Error(`Bad uniform spec: "${spec}"`);
+  return { type: m[1], count: m[2] ? parseInt(m[2]) : 1 };
+}
 
 function buildPreamble(uniforms) {
   let lines = [
@@ -20,9 +28,8 @@ function buildPreamble(uniforms) {
     'uniform float iTime;',
     'uniform vec4 iMouse;',
   ];
-  for (const [name, u] of Object.entries(uniforms)) {
-    const type = u.type || 'vec4';
-    const count = u.count || 1;
+  for (const [name, spec] of Object.entries(uniforms)) {
+    const { type, count } = parseUniform(spec);
     if (count > 1) {
       lines.push(`uniform ${type} ${name}[${count}];`);
     } else {
@@ -67,11 +74,10 @@ function link(gl, vs, fs) {
  *
  * @param {HTMLCanvasElement} canvas
  * @param {string} shaderSource - user GLSL (must define mainImage)
- * @param {Object} uniforms - from config.json { name: { type, count } }
- * @param {HTMLElement} overlay - overlay div for JS-driven UI
- * @returns engine object
+ * @param {Object} uniforms - { name: spec } e.g. { pts: 'vec2[6]' }
+ * @returns engine object with setUniformValue(), start(), canvas, gl
  */
-export function createEngine(canvas, shaderSource, uniforms, overlay) {
+export function createEngine(canvas, shaderSource, uniforms) {
   const gl = canvas.getContext('webgl2', { antialias: false });
   if (!gl) throw new Error('WebGL 2 not supported');
 
@@ -90,9 +96,8 @@ export function createEngine(canvas, shaderSource, uniforms, overlay) {
 
   // Custom uniform locations + metadata
   const customUniforms = {};
-  for (const [name, u] of Object.entries(uniforms)) {
-    const type = u.type || 'vec4';
-    const count = u.count || 1;
+  for (const [name, spec] of Object.entries(uniforms)) {
+    const { type, count } = parseUniform(spec);
     const locName = count > 1 ? name + '[0]' : name;
     customUniforms[name] = {
       loc: gl.getUniformLocation(prog, locName),
@@ -143,20 +148,23 @@ export function createEngine(canvas, shaderSource, uniforms, overlay) {
   const vao = gl.createVertexArray();
   gl.bindVertexArray(vao);
 
-  const engine = {
-    canvas,
-    overlay,
-    gl,
-    setUniformValue(name, value) {
-      uniformValues[name] = value;
-    },
-  };
-
   // Render loop
   let startTime = performance.now() / 1000;
   let lastTime = startTime;
   let frame = 0;
   let onFrameCb = null;
+
+  const engine = {
+    canvas,
+    gl,
+    setUniformValue(name, value) {
+      uniformValues[name] = value;
+    },
+    start(onFrame) {
+      onFrameCb = onFrame || null;
+      requestAnimationFrame(render);
+    },
+  };
 
   function render(now) {
     now /= 1000;
@@ -166,13 +174,11 @@ export function createEngine(canvas, shaderSource, uniforms, overlay) {
 
     resize();
 
-    // Call script hook
     if (onFrameCb) onFrameCb(engine, time, deltaTime, frame);
 
     // Upload built-ins
     gl.uniform2f(uResolution, canvas.width, canvas.height);
     gl.uniform1f(uTime, time);
-    // Shadertoy: iMouse.z > 0 when button is held
     gl.uniform4f(uMouse, mouse[0], mouse[1],
       mouseDown ? mouse[2] : -Math.abs(mouse[2]),
       mouseDown ? mouse[3] : -Math.abs(mouse[3]));
@@ -195,11 +201,5 @@ export function createEngine(canvas, shaderSource, uniforms, overlay) {
     requestAnimationFrame(render);
   }
 
-  return {
-    engine,
-    start(onFrame) {
-      onFrameCb = onFrame;
-      requestAnimationFrame(render);
-    },
-  };
+  return engine;
 }

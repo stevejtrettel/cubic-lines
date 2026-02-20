@@ -1,9 +1,10 @@
 // P2 viewport: draws the 15 lines connecting 6 points,
 // and the 6 conics (each through 5 of the 6 points).
 //
-// conics[2*i], conics[2*i+1] = coefficients of conic i:
-//   a·x² + b·y² + c·z² + d·xy + e·yz + f·xz  (z=1 in affine chart)
-//   vec3(a, b, c), vec3(d, e, f)
+// Conic coefficients in graded lex order: x², xy, xz, y², yz, z²
+// Packed as conics[2*i] = vec3(x², xy, xz), conics[2*i+1] = vec3(y², yz, z²)
+// In the affine chart z=1 this gives:
+//   a·x² + b·xy + c·x + d·y² + e·y + f
 
 float lineDist(vec2 p, vec2 a, vec2 b) {
     vec2 ab = b - a;
@@ -13,16 +14,16 @@ float lineDist(vec2 p, vec2 a, vec2 b) {
 float conicF(vec2 p, int i) {
     float x = p.x, y = p.y;
     vec3 abc = conics[2*i], def_ = conics[2*i+1];
-    return abc.x*x*x + abc.y*y*y + abc.z
-         + def_.x*x*y + def_.y*y   + def_.z*x;
+    return abc.x*x*x + abc.y*x*y + abc.z*x
+         + def_.x*y*y + def_.y*y  + def_.z;
 }
 
 vec2 conicGrad(vec2 p, int i) {
     float x = p.x, y = p.y;
     vec3 abc = conics[2*i], def_ = conics[2*i+1];
     return vec2(
-        2.0*abc.x*x + def_.x*y + def_.z,
-        2.0*abc.y*y + def_.x*x + def_.y
+        2.0*abc.x*x + abc.y*y + abc.z,
+        abc.y*x + 2.0*def_.x*y + def_.y
     );
 }
 
