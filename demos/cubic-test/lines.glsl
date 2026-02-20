@@ -39,7 +39,7 @@ vec3 cylinderNormal(vec3 p, vec4 linePt, vec4 lineDir) {
 
 float allLinesDist(vec3 p) {
     float d = 1e6;
-    for (int i = 0; i < 21; i++) {
+    for (int i = 0; i < 27; i++) {
         d = min(d, cylinderDist(p, linePoints[i], lineDirections[i]));
     }
     return d;
@@ -48,7 +48,7 @@ float allLinesDist(vec3 p) {
 int closestLine(vec3 p) {
     float best = 1e6;
     int idx = 0;
-    for (int i = 0; i < 21; i++) {
+    for (int i = 0; i < 27; i++) {
         float d = cylinderDist(p, linePoints[i], lineDirections[i]);
         if (d < best) { best = d; idx = i; }
     }
@@ -92,10 +92,11 @@ vec3 shade(vec3 color, vec3 nn, vec3 rd) {
     return color * diff + vec3(spec * 0.4);
 }
 
-// Line colors: 0–14 pair lines (gray), 15–20 conic lines (blue)
+// Line colors: 0–14 pair lines (gray), 15–20 conic lines (blue), 21–26 blow-up lines (red)
 vec3 lineColor(int i) {
     if (i < 15) return vec3(0.55);
-    return vec3(0.2, 0.45, 0.9);
+    if (i < 21) return vec3(0.2, 0.45, 0.9);
+    return vec3(0.9, 0.25, 0.2);
 }
 
 // --- Render ---

@@ -11,7 +11,8 @@
  */
 
 import { conicThroughFivePoints, conicOtherIntersection } from '../../src/math/conic.js';
-import { cubicMap, evaluateMap } from '../../src/math/cubic-map.js';
+import { cubicMap, evaluateMap, evaluateMapDerivative } from '../../src/math/cubic-map.js';
+import { formsVanishingAt } from '../../src/math/forms.js';
 
 /**
  * Store a line (point + direction) into the flat arrays at index n.
@@ -50,11 +51,14 @@ export function compute(sixPoints) {
   // Cubic parameterization P2 → P3
   const basis = cubicMap(homog);
 
-  const linePoints = new Float32Array(21 * 4);
-  const lineDirections = new Float32Array(21 * 4);
+  const linePoints = new Float32Array(27 * 4);
+  const lineDirections = new Float32Array(27 * 4);
+
+  let cubicCoeffs = null;
 
   if (basis) {
     let n = 0;
+    const p3Samples = []; // collect P3 points for implicitization
 
     // 15 lines from pairs of points.
     // The line through pᵢ, pⱼ in P2 maps to a line in P3.
@@ -74,9 +78,19 @@ export function compute(sixPoints) {
         ];
         const p3a = evaluateMap(basis, m1);
         const p3b = evaluateMap(basis, m2);
+        p3Samples.push(p3a, p3b);
         storeLine(linePoints, lineDirections, n, p3a, p3b);
         n++;
       }
+    }
+
+    // Implicitize: find the degree-3 form in P3 vanishing at all sample points.
+    // 30 points × 20 monomials → null space should be 1-dimensional.
+    const implicitBasis = formsVanishingAt(p3Samples, 3);
+    if (implicitBasis.length > 0) {
+      cubicCoeffs = implicitBasis[0];
+      console.log('implicit equation (20 coeffs, graded lex x,y,z,w):', Array.from(cubicCoeffs));
+      console.log('null space dimension:', implicitBasis.length);
     }
 
     // 6 lines from conics.
@@ -100,7 +114,19 @@ export function compute(sixPoints) {
       }
       n++;
     }
+
+    // 6 exceptional lines from blow-ups.
+    // At base point pᵢ all cubics vanish, so the image is the Jacobian:
+    //   φ(pᵢ + εv) ≈ ε · J(pᵢ)·v
+    // Two other base points serve as directions (Euler: ∇fₖ(pᵢ)·pᵢ = 0).
+    for (let i = 0; i < 6; i++) {
+      const j1 = (i + 1) % 6, j2 = (i + 2) % 6;
+      const p3a = evaluateMapDerivative(basis, homog[i], homog[j1]);
+      const p3b = evaluateMapDerivative(basis, homog[i], homog[j2]);
+      storeLine(linePoints, lineDirections, n, p3a, p3b);
+      n++;
+    }
   }
 
-  return { pts, conics, linePoints, lineDirections };
+  return { pts, conics, linePoints, lineDirections, cubicCoeffs };
 }

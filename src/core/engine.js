@@ -141,40 +141,51 @@ export function createEngine(canvas, shaderSource, uniforms) {
       gl.viewport(0, 0, w, h);
     }
   }
-  new ResizeObserver(resize).observe(canvas);
+  new ResizeObserver(() => { resize(); requestRender(); }).observe(canvas);
   resize();
 
   // VAO (required in WebGL 2 even for vertex-less draws)
   const vao = gl.createVertexArray();
   gl.bindVertexArray(vao);
 
-  // Render loop
+  // Demand-driven rendering: only draw when something changes
   let startTime = performance.now() / 1000;
-  let lastTime = startTime;
   let frame = 0;
-  let onFrameCb = null;
+  let renderPending = false;
+  let started = false;
+
+  function requestRender() {
+    if (started && !renderPending) {
+      renderPending = true;
+      requestAnimationFrame(render);
+    }
+  }
 
   const engine = {
     canvas,
     gl,
     setUniformValue(name, value) {
       uniformValues[name] = value;
+      requestRender();
     },
-    start(onFrame) {
-      onFrameCb = onFrame || null;
-      requestAnimationFrame(render);
+    requestRender,
+    start() {
+      started = true;
+      requestRender();
     },
   };
 
+  // Re-render on mouse interaction
+  canvas.addEventListener('mousemove', requestRender);
+  canvas.addEventListener('mousedown', requestRender);
+  canvas.addEventListener('mouseup', requestRender);
+
   function render(now) {
+    renderPending = false;
     now /= 1000;
     const time = now - startTime;
-    const deltaTime = now - lastTime;
-    lastTime = now;
 
     resize();
-
-    if (onFrameCb) onFrameCb(engine, time, deltaTime, frame);
 
     // Upload built-ins
     gl.uniform2f(uResolution, canvas.width, canvas.height);
@@ -198,7 +209,6 @@ export function createEngine(canvas, shaderSource, uniforms) {
 
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     frame++;
-    requestAnimationFrame(render);
   }
 
   return engine;

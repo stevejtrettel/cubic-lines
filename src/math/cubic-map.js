@@ -12,7 +12,7 @@
  */
 
 import { formsVanishingAt } from './forms.js';
-import { evaluateForm } from './monomials.js';
+import { evaluateForm, formGradient } from './monomials.js';
 
 /**
  * Compute the cubic map P2 → P3 from 6 points.
@@ -37,4 +37,31 @@ export function cubicMap(pts) {
  */
 export function evaluateMap(basis, point) {
   return basis.map(coeffs => evaluateForm(coeffs, point, 3));
+}
+
+/**
+ * Directional derivative of the cubic map at a point.
+ *
+ * Computes J(point) · direction where J is the 4×3 Jacobian
+ * [∇f₀, ∇f₁, ∇f₂, ∇f₃].
+ *
+ * At a base point p where all fᵢ vanish, this gives the limiting
+ * image direction: φ(p + εv) ≈ ε · evaluateMapDerivative(basis, p, v).
+ * Two such evaluations with independent directions v₁, v₂ give
+ * two points on the exceptional line over p.
+ *
+ * By Euler's identity (∇fᵢ(p)·p = 3·fᵢ(p) = 0 at a base point),
+ * the p-component of direction contributes nothing, so any other
+ * base point can be used directly as a direction.
+ *
+ * @param {Float64Array[]} basis — 4 cubic forms (from cubicMap)
+ * @param {Array} point — [x, y, z] in P2 (a base point)
+ * @param {Array} direction — [x, y, z] in P2
+ * @returns {number[]} point in P3
+ */
+export function evaluateMapDerivative(basis, point, direction) {
+  return basis.map(coeffs => {
+    const g = formGradient(coeffs, point, 3);
+    return g[0] * direction[0] + g[1] * direction[1] + g[2] * direction[2];
+  });
 }

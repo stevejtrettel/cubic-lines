@@ -25,7 +25,7 @@ export function createSixPointEditor(container, opts = {}) {
   const points = DEFAULTS.map(([x, y]) => new Point(x, y));
 
   const { svg } = createPointEditor(container, points, {
-    style: (i) => ({ fill: COLORS[i], stroke: '#333', 'stroke-width': '0.02' }),
+    style: () => ({ fill: '#e74c3c', stroke: '#333', 'stroke-width': '0.02' }),
     ...opts,
   });
   const listeners = [];
