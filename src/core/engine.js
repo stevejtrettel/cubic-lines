@@ -21,8 +21,13 @@ function buildPreamble(uniforms) {
     'uniform vec4 iMouse;',
   ];
   for (const [name, u] of Object.entries(uniforms)) {
+    const type = u.type || 'vec4';
     const count = u.count || 1;
-    lines.push(`uniform vec4 ${name}[${count}];`);
+    if (count > 1) {
+      lines.push(`uniform ${type} ${name}[${count}];`);
+    } else {
+      lines.push(`uniform ${type} ${name};`);
+    }
   }
   lines.push(
     'out vec4 _fragColor;',
@@ -83,10 +88,17 @@ export function createEngine(canvas, shaderSource, uniforms, overlay) {
   const uTime = gl.getUniformLocation(prog, 'iTime');
   const uMouse = gl.getUniformLocation(prog, 'iMouse');
 
-  // Custom uniform locations
-  const customLocs = {};
-  for (const name of Object.keys(uniforms)) {
-    customLocs[name] = gl.getUniformLocation(prog, name + '[0]');
+  // Custom uniform locations + metadata
+  const customUniforms = {};
+  for (const [name, u] of Object.entries(uniforms)) {
+    const type = u.type || 'vec4';
+    const count = u.count || 1;
+    const locName = count > 1 ? name + '[0]' : name;
+    customUniforms[name] = {
+      loc: gl.getUniformLocation(prog, locName),
+      type,
+      count,
+    };
   }
 
   // Uniform value store
@@ -166,9 +178,16 @@ export function createEngine(canvas, shaderSource, uniforms, overlay) {
       mouseDown ? mouse[3] : -Math.abs(mouse[3]));
 
     // Upload custom uniforms
-    for (const [name, loc] of Object.entries(customLocs)) {
+    for (const [name, u] of Object.entries(customUniforms)) {
       const val = uniformValues[name];
-      if (val) gl.uniform4fv(loc, val);
+      if (val == null) continue;
+      switch (u.type) {
+        case 'float': gl.uniform1fv(u.loc, val instanceof Float32Array ? val : [val]); break;
+        case 'vec2':  gl.uniform2fv(u.loc, val); break;
+        case 'vec3':  gl.uniform3fv(u.loc, val); break;
+        case 'vec4':  gl.uniform4fv(u.loc, val); break;
+        case 'int':   gl.uniform1iv(u.loc, val instanceof Int32Array ? val : [val]); break;
+      }
     }
 
     gl.drawArrays(gl.TRIANGLES, 0, 3);
