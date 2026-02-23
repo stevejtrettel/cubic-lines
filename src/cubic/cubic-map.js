@@ -11,8 +11,8 @@
  * (degree-3 monomials in graded lex order).
  */
 
-import { formsVanishingAt } from './forms.js';
-import { evaluateForm, formGradient } from './monomials.js';
+import { formsVanishingAt } from '../math/forms.js';
+import { evaluateForm, formGradient } from '../math/monomials.js';
 
 /**
  * Compute the cubic map P2 → P3 from 6 points.
@@ -62,6 +62,8 @@ export function evaluateMap(basis, point) {
 export function evaluateMapDerivative(basis, point, direction) {
   return basis.map(coeffs => {
     const g = formGradient(coeffs, point, 3);
-    return g[0] * direction[0] + g[1] * direction[1] + g[2] * direction[2];
+    let dot = 0;
+    for (let i = 0; i < g.length; i++) dot += g[i] * direction[i];
+    return dot;
   });
 }

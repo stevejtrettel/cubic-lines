@@ -1,7 +1,5 @@
-import { Point } from './point.js';
-import { createPointEditor } from './editor.js';
-
-const COLORS = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c'];
+import { Point } from '../points/point.js';
+import { createPointEditor } from '../points/editor.js';
 
 /**
  * A ready-to-use editor with 6 draggable points.

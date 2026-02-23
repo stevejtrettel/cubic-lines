@@ -75,27 +75,43 @@ export function evaluateForm(coeffs, point, degree) {
 /**
  * Gradient of a homogeneous form at a point.
  *
- * Returns [∂f/∂x, ∂f/∂y, ∂f/∂z] evaluated at point.
+ * Returns [∂f/∂x₁, …, ∂f/∂xₙ] evaluated at point.
+ * Point length determines the number of variables.
  * Each partial derivative of a degree-d form is a degree-(d-1) form.
  *
  * @param {ArrayLike} coeffs — coefficients in graded lex order
- * @param {Array} point — [x, y, z]
+ * @param {Array} point
  * @param {number} degree
- * @returns {number[]} [∂f/∂x, ∂f/∂y, ∂f/∂z]
+ * @returns {number[]} gradient vector (same length as point)
  */
 export function formGradient(coeffs, point, degree) {
-  const [x, y, z] = point;
-  let dx = 0, dy = 0, dz = 0;
+  const n = point.length;
+  const grad = new Array(n).fill(0);
+  const exps = new Array(n);
   let i = 0;
-  for (let a = degree; a >= 0; a--) {
-    for (let b = degree - a; b >= 0; b--) {
-      const c = degree - a - b;
+
+  function enumerate(pos, remaining) {
+    if (pos === n - 1) {
+      exps[pos] = remaining;
       const ci = coeffs[i];
-      if (a > 0) dx += ci * a * x ** (a - 1) * y ** b * z ** c;
-      if (b > 0) dy += ci * b * x ** a * y ** (b - 1) * z ** c;
-      if (c > 0) dz += ci * c * x ** a * y ** b * z ** (c - 1);
+      for (let k = 0; k < n; k++) {
+        if (exps[k] > 0) {
+          let val = ci * exps[k];
+          for (let j = 0; j < n; j++) {
+            const e = j === k ? exps[j] - 1 : exps[j];
+            if (e > 0) val *= point[j] ** e;
+          }
+          grad[k] += val;
+        }
+      }
       i++;
+      return;
+    }
+    for (let a = remaining; a >= 0; a--) {
+      exps[pos] = a;
+      enumerate(pos + 1, remaining - a);
     }
   }
-  return [dx, dy, dz];
+  enumerate(0, degree);
+  return grad;
 }

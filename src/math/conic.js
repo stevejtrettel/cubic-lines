@@ -26,7 +26,7 @@ export function conicThroughFivePoints(pts) {
 }
 
 /**
- * Bilinear form (polarization) of a conic.
+ * Bilinear form of a conic.
  *
  * B(p, q) = pᵀMq where M is the conic's symmetric matrix.
  * Satisfies f(p) = B(p, p).
@@ -62,5 +62,5 @@ export function conicOtherIntersection(coeffs, q, v) {
   const fv = evaluateForm(coeffs, v, 2);
   if (Math.abs(fv) < 1e-12) return null;
   const t = -2 * conicBilinear(coeffs, q, v) / fv;
-  return [q[0] + t * v[0], q[1] + t * v[1], q[2] + t * v[2]];
+  return q.map((qi, i) => qi + t * v[i]);
 }

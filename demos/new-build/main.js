@@ -1,9 +1,31 @@
 import { createSplitView } from '../../src/core/split-view.js';
 import { createEngine } from '../../src/core/engine.js';
-import { createSixPointEditor } from '../../src/points/six-point-editor.js';
-import { compute } from './compute.js';
-import cubicSource from './cubic.glsl?raw';
+import { createSixPointEditor } from '../../src/cubic/six-point-editor.js';
+import { compute } from '../../src/cubic/compute.js';
+
+// Shared GLSL library
+import cameraGLSL from '../../src/shaders/camera.glsl?raw';
+import sdfGLSL from '../../src/shaders/sdf.glsl?raw';
+import projLineGLSL from '../../src/shaders/projective-line.glsl?raw';
+import shadingGLSL from '../../src/shaders/shading.glsl?raw';
+import cubicSurfaceGLSL from '../../src/shaders/cubic-surface.glsl?raw';
+
+// Demo-specific shaders
+import cubicBody from './cubic.glsl?raw';
 import p2Source from './p2.glsl?raw';
+
+// Parameters that the shared GLSL library needs (defined before it).
+// These must come before the library because sdf.glsl, shading.glsl,
+// and cubic-surface.glsl all reference them.
+const shaderConfig = `
+#define BOX_SIZE        2.0
+#define LIGHT_DIR       normalize(vec3(0.4, 1.0, 0.3))
+#define STEP_SIZE       0.008
+#define LINE_RADIUS     0.015
+#define BOUNDARY_RADIUS 0.015
+`;
+
+const shaderLib = shaderConfig + cameraGLSL + sdfGLSL + projLineGLSL + shadingGLSL;
 
 const app = document.getElementById('app');
 const { left, right } = createSplitView(app);
@@ -17,7 +39,7 @@ const editor = createSixPointEditor(left.addOverlay());
 editor.svg.style.background = 'transparent';
 
 // Right viewport: cubic surface + 27 lines
-const engineCubic = createEngine(right.addCanvas(), cubicSource, {
+const engineCubic = createEngine(right.addCanvas(), shaderLib + cubicSurfaceGLSL + cubicBody, {
   coefficients:   'vec4[5]',
   linePoints:     'vec4[27]',
   lineDirections: 'vec4[27]',
