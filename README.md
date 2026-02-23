@@ -47,13 +47,12 @@ These four cubics define a rational map
 
 This map is well-defined away from the 6 base points (where all four
 cubics vanish simultaneously). Its image S is a smooth cubic surface in
-P3 — the blow-up of P2 at the six points.
+P3.
 
 **What the code does.** `formsVanishingAt` (in `src/math/forms.js`)
 builds the evaluation matrix and `nullSpace` (in `src/math/linalg.js`)
-computes the 4-dimensional kernel via RREF with partial pivoting.
-The basis is stored as four Float64Arrays of length 10, one per cubic,
-in graded lex order. Evaluating phi at a point means evaluating each
+computes the 4-dimensional kernel via RREF.
+The basis is stored as four Float64Arrays of length 10, one per cubic. Evaluating phi at a point means evaluating each
 of the four cubics — that's `evaluateMap` in `src/cubic/cubic-map.js`.
 
 ### Step 2: The 27 lines
@@ -65,14 +64,8 @@ image line?** Two points determine a line in P3, so that's all we need.
 #### 15 pair lines: lines through pairs of base points
 
 For each pair (pi, pj), the line l_{ij} through them in P2 maps to a
-line on S. There are C(6,2) = 15 such pairs.
+line on S. There are 15 such pairs.
 
-**Why a line?** Parametrize l_{ij} as pi + t(pj - pi). Each basis
-cubic f_k is degree 3 in t along this line, and vanishes at both
-endpoints (t = 0 and t = 1), so f_k(t) has roots at 0 and 1. That
-means f_k(t) = t(t-1) g_k(t) where g_k is linear in t. The four
-linear functions [g0(t) : g1(t) : g2(t) : g3(t)] trace out a line in
-P3. (The common factor t(t-1) cancels in projective coordinates.)
 
 **The problem:** phi is undefined at pi and pj themselves — all four
 cubics vanish, so [0:0:0:0] is not a projective point. **The fix:**
@@ -83,19 +76,14 @@ phi(q) and phi(q') that span the image line.
 #### 6 conic lines: conics through 5 of the 6 base points
 
 For each i, there is a unique conic Ci through the five points
-{p1,...,p6} \ {pi}. (A degree-2 form in 3 variables has 6 coefficients;
-5 vanishing conditions leave a 1-dimensional kernel, so the conic is
-unique up to scale.) The image phi(Ci) is a line on S.
+{p1,...,p6} \ {pi}. The image phi(Ci) is a line on S.
 
 
 **The problem:** we just need two points on Ci. Once we have these we can just push them through our parameterization to get two points in P3 that lie on our line on the cubic.  However these can't be the points we know (the basepoints) as all parameterizations vanish there!
 
  **The fix:** the omitted point pi is NOT
-on Ci, so we can use it to "push" a base point along the conic to a
-new point. Concretely, pick a base point q on Ci (say p_j for j != i).
-The line from q toward pi intersects Ci at a second point r. Since pi
-is not on Ci, this second intersection is generically not a base point,
-so phi(r) is well-defined.
+on Ci, so we can connect it to one of the other points we chose (which lies on the conic) by a line.  This line should intersect the conic twice: once at this chosen point, and a *second time* - which generically is a new point not in our list!  If we do this for two points we know are on the conic, we get two points not in our original six, and pushing them through the parameterization gives two points on the image line in P3.
+
 
 **Finding the second intersection.** A conic f(p) = p^T M p has an
 associated bilinear form B(p,q) = p^T M q, satisfying f(p) = B(p,p).
