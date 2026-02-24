@@ -46,7 +46,7 @@ These four cubics define a rational map
     phi: P2 --> P3,    [x:y:z] |-> [f0(x,y,z) : f1(x,y,z) : f2(x,y,z) : f3(x,y,z)]
 
 This map is well-defined away from the 6 base points (where all four
-cubics vanish simultaneously). Its image S is a smooth cubic surface in
+cubics vanish simultaneously). The closure of the image S is a smooth cubic surface in
 P3.
 
 **What the code does.** `formsVanishingAt` (in `src/math/forms.js`)
@@ -157,7 +157,7 @@ and general position guarantees they work.
 
 The map phi gives a parametric description of S, but the shader needs
 an implicit equation F(X,Y,Z,W) = 0 to raymarch. We need to find the
-unique degree-3 homogeneous polynomial in 4 variables that vanishes on
+unique (up to scaling) degree-3 homogeneous polynomial in 4 variables that vanishes on
 S.
 
 A degree-3 form in 4 variables has C(6,3) = 20 monomials, so F has 20
