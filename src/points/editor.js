@@ -6,7 +6,7 @@
  *   opts.viewBox — SVG viewBox string (default "-2 -2 4 4")
  *   opts.radius  — grab/display radius in SVG units (default 0.08)
  *   opts.style   — (index, point) => attribute object for each circle
- *
+ *   
  * Returns { svg, els } where els[i] is the <circle> for points[i].
  */
 
@@ -16,6 +16,7 @@ export function createPointEditor(container, points, opts = {}) {
   const viewBox = opts.viewBox || '-2 -2 4 4';
   const r = opts.radius || 0.08;
   const styleFn = opts.style || (() => ({}));
+  const dragStyleFn = opts.dragStyle || (() => ({}));
   const [vx, vy, vw, vh] = viewBox.split(' ').map(Number);
 
   const svg = document.createElementNS(SVG, 'svg');
@@ -59,6 +60,8 @@ export function createPointEditor(container, points, opts = {}) {
       const dx = points[i].x - pos.x, dy = points[i].y - pos.y;
       if (Math.sqrt(dx * dx + dy * dy) < r * 3) {
         drag = i;
+        const attrs = dragStyleFn();
+        for (const [k,v] of Object.entries(attrs)) els[i].setAttribute(k,v);
         e.preventDefault();
         return;
       }
@@ -71,7 +74,13 @@ export function createPointEditor(container, points, opts = {}) {
     points[drag].moveTo(pos.x, pos.y);
   });
 
-  window.addEventListener('mouseup', () => { drag = null; });
+  window.addEventListener('mouseup', () => { 
+    if (drag!=null){
+      const attrs = styleFn();
+      for (const [k,v] of Object.entries(attrs)) els[drag].setAttribute(k,v);
+    }
+    drag = null;
+  });
 
   return { svg, els };
 }
