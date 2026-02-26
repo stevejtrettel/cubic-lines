@@ -43,15 +43,18 @@ const engineCubic = createEngine(right.addCanvas(), shaderLib + cubicSurfaceGLSL
   coefficients:   'vec4[5]',
   linePoints:     'vec4[27]',
   lineDirections: 'vec4[27]',
+  activeLineIndex: 'int', // <-- This keeps track of which point I'm dragging, so I can color the associated line green.
 });
 
 function update() {
   const { pts, conics, linePoints, lineDirections, cubicCoeffs } = compute(editor.coords());
-
+  const activeIdx = editor.active();
+  const lineIdx = activeIdx === null ? -1 : activeIdx + 21;
   engineP2.setUniformValue('pts', pts);
   engineP2.setUniformValue('conics', conics);
   engineCubic.setUniformValue('linePoints', linePoints);
   engineCubic.setUniformValue('lineDirections', lineDirections);
+  engineCubic.setUniformValue('activeLineIndex' , lineIdx);
 
   if (cubicCoeffs) {
     engineCubic.setUniformValue('coefficients', new Float32Array(cubicCoeffs));

@@ -7,6 +7,7 @@
 // Requires before inclusion:
 //   - uniform vec4 coefficients[5]  (20 cubic coeffs, graded lex x,y,z,w)
 //   - uniform vec4 linePoints[27], lineDirections[27]
+//   - uniform int activeLineIndex
 //   - #define STEP_SIZE, LINE_RADIUS, BOUNDARY_RADIUS
 //   - boxSDF() from sdf.glsl
 //   - cylinderDist(), cylinderNormal() from projective-line.glsl
@@ -136,6 +137,7 @@ int closestLine(vec3 p) {
 
 // 0–14: pair lines (gray), 15–20: conic lines (blue), 21–26: exceptional lines (red)
 vec3 lineColor(int i) {
+    if (i== activeLineIndex) return vec3(0.06,0.51,0.10);
     if (i < 15) return vec3(0.55);
     if (i < 21) return vec3(0.2, 0.45, 0.9);
     return vec3(0.9, 0.25, 0.2);

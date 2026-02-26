@@ -53,6 +53,7 @@ export function createPointEditor(container, points, opts = {}) {
 
   // Drag
   let drag = null;
+  const activeListeners = []; //This will help expose the index of the dragged point so we can send it to the shader
 
   svg.addEventListener('mousedown', (e) => {
     const pos = svgPos(e);
@@ -61,7 +62,8 @@ export function createPointEditor(container, points, opts = {}) {
       if (Math.sqrt(dx * dx + dy * dy) < r * 3) {
         drag = i;
         const attrs = dragStyleFn();
-        for (const [k,v] of Object.entries(attrs)) els[i].setAttribute(k,v);
+        for (const [k,v] of Object.entries(attrs)) els[i].setAttribute(k,v); //Color the dragged point
+        for (const fn of activeListeners) fn(i); //notify the dragged point to main so it can be set as a uniform
         e.preventDefault();
         return;
       }
@@ -78,9 +80,14 @@ export function createPointEditor(container, points, opts = {}) {
     if (drag!=null){
       const attrs = styleFn();
       for (const [k,v] of Object.entries(attrs)) els[drag].setAttribute(k,v);
+      for (const fn of activeListeners) fn(null);
     }
     drag = null;
   });
 
-  return { svg, els };
+  return {
+    svg,
+    els,
+    onActiveChange(fn) {activeListeners.push(fn);},
+  };
 }

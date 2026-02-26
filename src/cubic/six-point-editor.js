@@ -22,12 +22,20 @@ export function createSixPointEditor(container, opts = {}) {
   ];
   const points = DEFAULTS.map(([x, y]) => new Point(x, y));
 
-  const { svg } = createPointEditor(container, points, {
+  const { svg, els, onActiveChange } = createPointEditor(container, points, {
     style: () => ({ fill: '#e74c3c', stroke: '#333', 'stroke-width': '0.02'}),
     dragStyle: () => ({ fill: '#10831a', stroke: '#333', 'stroke-width': '0.02'}),
     ...opts,
   });
+  let active = null;
   const listeners = [];
+
+  //This will listen to see what index is being dragged
+  onActiveChange((idx) => {
+    active = idx;
+    notify();  
+  });
+
 
   function notify() {
     for (const fn of listeners) fn(points);
@@ -39,5 +47,6 @@ export function createSixPointEditor(container, opts = {}) {
     svg,
     onChange(fn) { listeners.push(fn); },
     coords() { return points.map(p => [p.x, p.y]); },
+    active() { return active; },
   };
 }
