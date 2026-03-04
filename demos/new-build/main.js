@@ -2,6 +2,8 @@ import { createSplitView } from '../../src/core/split-view.js';
 import { createEngine } from '../../src/core/engine.js';
 import { createSixPointEditor } from '../../src/cubic/six-point-editor.js';
 import { compute } from '../../src/cubic/compute.js';
+import { formatDataGLSL } from '../../src/export/format-data-glsl.js';
+import { download } from '../../src/export/download.js';
 
 // Shared GLSL library
 import cameraGLSL from '../../src/shaders/camera.glsl?raw';
@@ -40,26 +42,45 @@ editor.svg.style.background = 'transparent';
 
 // Right viewport: cubic surface + 27 lines
 const engineCubic = createEngine(right.addCanvas(), shaderLib + cubicSurfaceGLSL + cubicBody, {
-  coefficients:   'vec4[5]',
-  linePoints:     'vec4[27]',
-  lineDirections: 'vec4[27]',
+  coefficients:    'vec4[5]',
+  linePoints:      'vec4[27]',
+  lineDirections:  'vec4[27]',
+  activeLineIndex: 'int',
 });
 
+let lastCompute = null;
+
 function update() {
-  const { pts, conics, linePoints, lineDirections, cubicCoeffs } = compute(editor.coords());
+  const result = compute(editor.coords());
+  lastCompute = result;
 
-  engineP2.setUniformValue('pts', pts);
-  engineP2.setUniformValue('conics', conics);
-  engineCubic.setUniformValue('linePoints', linePoints);
-  engineCubic.setUniformValue('lineDirections', lineDirections);
+  engineP2.setUniformValue('pts', result.pts);
+  engineP2.setUniformValue('conics', result.conics);
+  engineCubic.setUniformValue('linePoints', result.linePoints);
+  engineCubic.setUniformValue('lineDirections', result.lineDirections);
 
-  if (cubicCoeffs) {
-    engineCubic.setUniformValue('coefficients', new Float32Array(cubicCoeffs));
+  if (result.cubicCoeffs) {
+    engineCubic.setUniformValue('coefficients', new Float32Array(result.cubicCoeffs));
   }
 }
 
 editor.onChange(update);
 update();
+
+// Export button
+const btn = document.createElement('button');
+btn.textContent = 'Export data.glsl';
+Object.assign(btn.style, {
+  position: 'fixed', top: '12px', right: '12px', zIndex: '1000',
+  padding: '6px 14px', cursor: 'pointer',
+  background: '#222', color: '#eee', border: '1px solid #555',
+  borderRadius: '4px', fontSize: '13px',
+});
+btn.onclick = () => {
+  if (!lastCompute?.cubicCoeffs) return;
+  download('data.glsl', formatDataGLSL(lastCompute));
+};
+document.body.appendChild(btn);
 
 engineCubic.start();
 engineP2.start();
