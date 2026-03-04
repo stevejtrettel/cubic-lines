@@ -2,7 +2,8 @@ import { createSplitView } from '../../src/core/split-view.js';
 import { createEngine } from '../../src/core/engine.js';
 import { createSixPointEditor } from '../../src/cubic/six-point-editor.js';
 import { compute } from '../../src/cubic/compute.js';
-import { formatDataGLSL } from '../../src/export/format-data-glsl.js';
+import { formatScene3dGLSL } from '../../src/export/format-scene3d-glsl.js';
+import { formatScene2dGLSL } from '../../src/export/format-scene2d-glsl.js';
 import { download } from '../../src/export/download.js';
 
 // Shared GLSL library
@@ -67,9 +68,9 @@ function update() {
 editor.onChange(update);
 update();
 
-// Export button
+// Export button — downloads scene3d.glsl and scene2d.glsl
 const btn = document.createElement('button');
-btn.textContent = 'Export data.glsl';
+btn.textContent = 'Export';
 Object.assign(btn.style, {
   position: 'fixed', top: '12px', right: '12px', zIndex: '1000',
   padding: '6px 14px', cursor: 'pointer',
@@ -78,7 +79,8 @@ Object.assign(btn.style, {
 });
 btn.onclick = () => {
   if (!lastCompute?.cubicCoeffs) return;
-  download('data.glsl', formatDataGLSL(lastCompute));
+  download('scene3d.glsl', formatScene3dGLSL(lastCompute));
+  download('scene2d.glsl', formatScene2dGLSL(lastCompute));
 };
 document.body.appendChild(btn);
 

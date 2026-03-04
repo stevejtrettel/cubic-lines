@@ -1,7 +1,7 @@
 /**
- * Format cubic surface data as a data.glsl file.
+ * Format 3D cubic surface data as scene3d.glsl.
  *
- * Expects the raw output of compute():
+ * Expects from compute():
  *   - cubicCoeffs:    Float64Array(20) — 20 cubic coefficients (graded lex)
  *   - linePoints:     Float32Array(108) — 27 line base points as vec4[27]
  *   - lineDirections: Float32Array(108) — 27 line directions as vec4[27]
@@ -14,7 +14,7 @@
  * Line indices: 0–14 pair, 15–20 conic, 21–26 exceptional.
  */
 
-export function formatDataGLSL({ cubicCoeffs, linePoints, lineDirections }) {
+export function formatScene3dGLSL({ cubicCoeffs, linePoints, lineDirections }) {
   const fmt = (v) => v.toFixed(8);
 
   // --- Coefficients ---
@@ -55,7 +55,7 @@ export function formatDataGLSL({ cubicCoeffs, linePoints, lineDirections }) {
   const formatLineArray = (start, count) =>
     lines.slice(start, start + count).map(fmtLine).join(',\n');
 
-  return `// Auto-generated cubic surface data.
+  return `// Auto-generated cubic surface data (3D scene).
 // Assumes: struct Line { vec3 point; vec3 dir; };
 
 const float C[20] = float[20](
