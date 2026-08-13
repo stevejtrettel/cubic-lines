@@ -5,8 +5,7 @@ import { compute } from './compute.js';
 import cubicSource from './cubic.glsl?raw';
 import p2Source from './p2.glsl?raw';
 
-const app = document.getElementById('app');
-const { left, right } = createSplitView(app);
+const { left, right } = createSplitView(document.body);
 
 // Left viewport: p2 shader behind, point editor on top
 const engineP2 = createEngine(left.addCanvas(), p2Source, {
